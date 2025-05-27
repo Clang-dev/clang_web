@@ -1,25 +1,24 @@
 import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Home from './app/Home';
+import LoginScreen from './app/LoginScreen';
+import NoRoom from './app/NoRoom';
+import CreateRoom from './app/CreateRoom';
+import JoinRoom from './app/JoinRoom';
+import AudioTranscription from './app/AudioTranscription';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<LoginScreen />} />
+        <Route path="/no-room" element={<NoRoom />} />
+        <Route path="/create-room" element={<CreateRoom />} />
+        <Route path="/join-room" element={<JoinRoom />} />
+        <Route path="/transcription/:id" element={<AudioTranscription />} />
+      </Routes>
+    </Router>
   );
 }
 
