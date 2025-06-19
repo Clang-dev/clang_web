@@ -5,8 +5,8 @@ import type { IconBaseProps } from 'react-icons';
 import type { ComponentType } from 'react';
 
 const languages = [
-  { id: '1', flag: '🇰🇷', label: ' 한국어' },
-  { id: '2', flag: '🇺🇸', label: ' English' },
+  { id: '1', flag: '🇰🇷', label: ' korean' },
+  { id: '2', flag: '🇺🇸', label: ' english' },
 ];
 
 const CreateRoom = () => {
@@ -18,6 +18,7 @@ const CreateRoom = () => {
 
   const BackIcon = IoChevronBack as ComponentType<IconBaseProps>;
   const DownIcon = IoChevronDown as ComponentType<IconBaseProps>;
+  const token = localStorage.getItem("access_token");
 
   const toggleLanguageDropdown = () => {
     setShowLanguageOptions(!showLanguageOptions);
@@ -30,18 +31,44 @@ const CreateRoom = () => {
 
   const handleCreateRoom = async () => {
     setCreateRoomBtnName('Creating...');
+
     if (!roomName.trim()) {
       alert('Classroom name is required.');
       setCreateRoomBtnName('Create');
       return;
     }
 
-    // Simulated response
-    setTimeout(() => {
+    try {
+      const res = await fetch("https://clang-a3xo.onrender.com/0.1.0/classroom/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`, // 🔐 Send token
+        },
+        body: JSON.stringify({
+          name: roomName,
+          language: selectedLanguage.trim() || "Unknown", // match `language` field
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to create classroom");
+      }
+
+      const data = await res.json();
       alert('Classroom created successfully!');
-      navigate(`/transcription/${roomName.toLowerCase().replace(/\s+/g, '-')}`); 
-    }, 500);
+      localStorage.setItem("classroom_uid", data.uid);  // ← Store classroom_uid
+
+      navigate(`/transcription/${data.uid}`);
+    } catch (error) {
+      console.error(error);
+      alert("Error creating classroom");
+    } finally {
+      setCreateRoomBtnName('Create');
+    }
   };
+
+
 
   return (
     <div style={styles.container}>
@@ -76,7 +103,7 @@ const CreateRoom = () => {
                 key={item.id}
                 type="button"
                 style={styles.dropdownOption}
-                onClick={() => handleLanguageSelect(`${item.flag} ${item.label}`)}
+                onClick={() => handleLanguageSelect(`${item.label}`)}
               >
                 <span style={styles.dropdownOptionText}>
                   {item.flag} {item.label}

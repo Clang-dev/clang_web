@@ -10,6 +10,7 @@ const LoginScreen: React.FC = () => {
   const [isVerified, setIsVerified] = useState(false);
   const [disabled, setDisabled] = useState(false);
   const [verificationButtonText, setVerificationButtonText] = useState('Send Verification Code');
+  const [language, setLanguage] = useState<'english' | 'korean'>('english');
 
   const validatePassword = (password: string) => {
     const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,15}$/;
@@ -28,16 +29,39 @@ const LoginScreen: React.FC = () => {
     window.alert(`${title}\n${message}`);
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email.trim()) return alert('Error', 'Email is required.');
     if (!validatePassword(password)) {
       return alert('Invalid Password', 'Password must be 6–15 characters long and contain letters and numbers.');
     }
-    alert('Success', 'Login successful!');
-    window.location.href = '/home'; // Simulate navigation
+
+    try {
+      const res = await fetch("https://clang-a3xo.onrender.com/0.1.0/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+          language: language,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("Success", "Login successful!");
+        localStorage.setItem("access_token", data.access_token); // Store token
+        localStorage.setItem("user_uid", data.user.uid); // Store username
+        window.location.href = "/"; // Navigate
+      } else {
+        alert("Login Failed", data.detail || "Unknown error");
+      }
+    } catch (error) {
+      alert("Network Error", "Could not connect to the server.");
+    }
   };
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     if (!username.trim()) return alert('Error', 'Full name is required.');
     if (!email.trim()) return alert('Error', 'Email is required.');
     if (!isVerified) return alert('Error', 'Please verify your email first.');
@@ -45,8 +69,37 @@ const LoginScreen: React.FC = () => {
       return alert('Invalid Password', 'Password must be 6–15 characters long and contain letters and numbers.');
     }
     if (password !== confirmPassword) return alert('Error', 'Passwords do not match.');
-    alert('Success', 'Account created successfully!');
-    handleLogin();
+
+    try {
+      // Log each data field before sending
+      console.log("Signup Data:", {
+      email: email,
+      username: username,
+      password: password,
+      language: language,
+      });
+
+      const res = await fetch("https://clang-a3xo.onrender.com/0.1.0/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email,
+        username: username,
+        password: password,
+        language: language,
+      }),
+      });
+
+      if (res.status === 201) {
+        alert("Success", "Account created successfully!");
+        handleLogin(); // Or redirect
+      } else {
+        const data = await res.json();
+        alert("Signup Failed", data.detail || "Unknown error");
+      }
+    } catch (error) {
+      alert("Network Error", "Could not connect to the server.");
+    }
   };
 
   const sendVerificationCode = () => {
@@ -86,6 +139,8 @@ const LoginScreen: React.FC = () => {
         onChange={(e) => setEmail(e.target.value)}
       />
 
+
+
       {!isVerifying ? (
         <button
           style={{
@@ -110,7 +165,14 @@ const LoginScreen: React.FC = () => {
           </button>
         </>
       )}
-
+      <select
+        style={{ ...styles.input, marginBottom: 15 }}
+        value={language}
+        onChange={e => setLanguage(e.target.value as 'english' | 'korean')}
+      >
+        <option value="english">English</option>
+        <option value="korean">Korean</option>
+      </select>
       <input
         style={styles.input}
         placeholder="Password"

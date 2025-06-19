@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { IoChevronBack } from 'react-icons/io5';
 import type { IconBaseProps } from 'react-icons';
@@ -7,7 +7,7 @@ import MicButton from '../assets/MicButton.png';
 
 interface TranscriptLine {
   speaker_name: string;
-  speaker_uid: string;
+  speaker_uid: string | null; // Use string | null to handle cases where speaker_uid might not be available
   text: string;
   created_at: string;
 }
@@ -19,11 +19,19 @@ const AudioTranscription = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
+  
   const [allTranscript, setAllTranscript] = useState<TranscriptLine[]>([]);
   const [buffer, setBuffer] = useState('');
   const [isExitPopupVisible, setExitPopupVisible] = useState(false);
-  const user_uid = 'demo-user';
+  // const user_uid = 'demo-user';
+  const user_uid = localStorage.getItem("user_uid");
+
   const user_name = 'You';
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
+  const classroom_uid = localStorage.getItem("classroom_uid");
+  
+
 
   const BackIcon = IoChevronBack as ComponentType<IconBaseProps>;
 
@@ -43,8 +51,9 @@ const AudioTranscription = () => {
     ];
     setAllTranscript(fakeLines);
   }, []);
+  
 
-  const toggleRecording = () => {
+  const toggleRecording = async () => {
     if (!isRecording) {
       setStatus('Recording...');
       setIsRecording(true);
@@ -58,12 +67,63 @@ const AudioTranscription = () => {
         },
       ]);
       setBuffer('(buffering...)');
+
+      // << ADDED >>
+      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const socket = new WebSocket(`https://clang-a3xo.onrender.com/0.1.0/transcribe/room/asr_translate_v2?classroom_uid=${classroom_uid}&user_uid=${user_uid}`);
+
+
+
+      const mediaRecorder = new MediaRecorder(audioStream, {
+        mimeType: 'audio/webm'
+      });
+
+      socket.onopen = () => {
+        mediaRecorder.addEventListener('dataavailable', async (event) => {
+          if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
+            socket.send(event.data);
+          }
+        });
+
+        mediaRecorder.start(250); // send data every 250ms
+      };
+
+socket.onmessage = (message) => {
+  const received = message.data;
+  if (received) {
+    setTranscript((prev) => [
+      ...prev,
+      {
+        speaker_name: user_name,
+        speaker_uid: user_uid,
+        text: received,
+        created_at: new Date().toISOString(),
+      }
+    ]);
+  }
+};
+
+
+      // Store references for stopping later
+      recorderRef.current = mediaRecorder;
+      socketRef.current = socket;
     } else {
       setStatus('Click to start transcription');
       setIsRecording(false);
       setIsSpeaking(false);
       setTranscript([]);
       setBuffer('');
+        // ✅ STOP MediaRecorder
+      if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+        recorderRef.current.stop();
+        recorderRef.current = null;
+      }
+
+      // ✅ CLOSE WebSocket
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
     }
   };
 

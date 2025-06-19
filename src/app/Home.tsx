@@ -13,14 +13,14 @@ const Home: React.FC = () => {
       <div style={styles.buttonContainer}>
         <button
           style={styles.button}
-          onClick={() => navigate('/join')}
+          onClick={() => navigate('/join-room')}
         >
           <span style={styles.buttonText}>Join Room</span>
         </button>
 
         <button
           style={{ ...styles.button, ...styles.secondaryButton }}
-          onClick={() => navigate('/create')}
+          onClick={() => navigate('/create-room')}
         >
           <span style={{ ...styles.buttonText, ...styles.secondaryButtonText }}>
             Create Room
