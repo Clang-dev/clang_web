@@ -1,7 +1,7 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import {useNavigate} from 'react-router-dom';
 
-const Home: React.FC = () => {
+const Home = () => {
   const navigate = useNavigate();
 
   return (
@@ -13,16 +13,14 @@ const Home: React.FC = () => {
       <div style={styles.buttonContainer}>
         <button
           style={styles.button}
-          onClick={() => navigate('/join-room')}
-        >
+          onClick={() => navigate('/join-room')}>
           <span style={styles.buttonText}>Join Room</span>
         </button>
 
         <button
-          style={{ ...styles.button, ...styles.secondaryButton }}
-          onClick={() => navigate('/create-room')}
-        >
-          <span style={{ ...styles.buttonText, ...styles.secondaryButtonText }}>
+          style={{...styles.button, ...styles.secondaryButton}}
+          onClick={() => navigate('/create-room')}>
+          <span style={{...styles.buttonText, ...styles.secondaryButtonText}}>
             Create Room
           </span>
         </button>
@@ -31,15 +29,16 @@ const Home: React.FC = () => {
   );
 };
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: {[key: string]: React.CSSProperties} = {
   container: {
     display: 'flex',
     flexDirection: 'column',
+    minHeight: '100vh',
     backgroundColor: '#FFFFFF',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 40,
-    height: '100vh',
+    paddingBottom: '40px',
+    boxSizing: 'border-box',
   },
   centeredTextContainer: {
     flex: 1,
@@ -48,29 +47,32 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
   },
   clangText: {
-    fontSize: 48,
+    fontSize: '48px',
     fontWeight: 'bold',
     color: '#1C1C1C',
     margin: 0,
   },
   buttonContainer: {
     width: '100%',
+    maxWidth: '400px',
     padding: '0 20px 20px',
+    boxSizing: 'border-box',
   },
   button: {
-    width: '100%',
-    height: 50,
+    height: '50px',
     backgroundColor: '#3680F7',
-    borderRadius: 8,
+    borderRadius: '8px',
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: '14px',
     border: 'none',
+    width: '100%',
     cursor: 'pointer',
   },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: '16px',
     fontWeight: 'bold',
   },
   secondaryButton: {

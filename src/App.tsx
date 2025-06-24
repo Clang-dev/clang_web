@@ -1,6 +1,8 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './app/Home';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import {UserProvider} from './hooks/UserContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Home from './app/Home';  
 import LoginScreen from './app/LoginScreen';
 import NoRoom from './app/NoRoom';
 import CreateRoom from './app/CreateRoom';
@@ -10,14 +12,24 @@ import AudioTranscription from './app/AudioTranscription';
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<LoginScreen />} />
-        <Route path="/no-room" element={<NoRoom />} />
-        <Route path="/create-room" element={<CreateRoom />} />
-        <Route path="/join-room" element={<JoinRoom />} />
-        <Route path="/transcription/:id" element={<AudioTranscription />} />
-      </Routes>
+      <UserProvider>
+        <Routes>
+          {/* Public route that everyone can access */}
+          <Route path="/login" element={<LoginScreen />} />
+
+          {/* Wrap protected routes in a Route element with ProtectedRoute */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/home" element={<Home />} />
+            <Route path="/no-room" element={<NoRoom />} />
+            <Route path="/create-room" element={<CreateRoom />} />
+            <Route path="/join-room" element={<JoinRoom />} />
+            <Route path="/transcription/:id" element={<AudioTranscription />} />
+          </Route>
+          
+          {/* Redirect any other path to the login page */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </UserProvider>
     </Router>
   );
 }
