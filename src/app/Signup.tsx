@@ -3,7 +3,7 @@ import {useNavigate} from 'react-router-dom';
 import {signUp, login, sendCode, verifyCode, me} from '../service/fetchService';
 import {useUser} from '../hooks/UserContext';
 
-const LoginScreen = () => {
+const Signup = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -184,6 +184,12 @@ const LoginScreen = () => {
         onClick={handleSignup}>
         Sign Up
       </button>
+      <p style={styles.loginPrompt}>
+        Already have an account?{' '}
+        <span style={styles.loginLink} onClick={() => navigate('/login')}>
+          Login
+        </span>
+      </p>
     </div>
   );
 };
@@ -238,6 +244,16 @@ const styles: {[key: string]: React.CSSProperties} = {
     backgroundColor: '#A7ACB6',
     cursor: 'not-allowed',
   },
+  loginPrompt: {
+    marginTop: '20px',
+    fontSize: '14px',
+    color: '#666',
+  },
+  loginLink: {
+    color: '#3680F7',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+  },
 };
 
-export default LoginScreen;
+export default Signup;

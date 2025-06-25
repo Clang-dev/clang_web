@@ -30,14 +30,14 @@ const NoRoom = () => {
           <button
             type="button"
             style={{ ...styles.button, ...styles.refreshButton }}
-            onClick={() => navigate('/join')}
+            onClick={() => navigate('/join-room')}
           >
             <span style={styles.refreshButtonText}>Refresh</span>
           </button>
           <button
             type="button"
             style={{ ...styles.button, ...styles.createRoomButton }}
-            onClick={() => navigate('/create')}
+            onClick={() => navigate('/create-room')}
           >
             <span style={styles.createRoomButtonText}>Create Room</span>
           </button>

@@ -6,7 +6,6 @@ import React, {
   ReactNode,
 } from 'react';
 import {me} from '../service/fetchService';
-import {useNavigate} from 'react-router-dom';
 
 // Define the shape of the user data
 interface User {
@@ -15,7 +14,7 @@ interface User {
   is_verified: boolean;
   email: string;
   role: string;
-  created_at: Date;
+  created_at: string;
 }
 
 // Define the context shape
@@ -26,9 +25,7 @@ interface UserContextType {
 }
 
 // Create context
-export const UserContext = createContext<UserContextType | undefined>(
-  undefined,
-);
+const UserContext = createContext<UserContextType | undefined>(undefined);
 
 // Define props for the provider
 interface UserProviderProps {
@@ -44,36 +41,30 @@ export const useUser = (): UserContextType => {
 };
 
 // User Provider component
-export const UserProvider: React.FC<UserProviderProps> = ({children}) => {
+export const UserProvider = ({children}: UserProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const checkUserSession = async () => {
       try {
         const response = await me();
-        if (!response) {
-          // No response or token refresh failed
-          navigate('/login', {replace: true});
+        if (response && response.ok) {
+          const userData = await response.json();
+          setUser(userData);
         } else {
-          const data = await response.json();
-          if (response.ok) {
-            setUser(data);
-          } else {
-            // Response not OK (e.g., invalid token)
-            navigate('/login', {replace: true});
-          }
+          setUser(null);
         }
       } catch (error) {
-        console.error('Error fetching user:', error);
-        navigate('/login', {replace: true});
+        console.error('Failed to fetch user session:', error);
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
-    fetchUser();
-  }, [navigate]);
+
+    checkUserSession();
+  }, []);
 
   return (
     <UserContext.Provider value={{user, setUser, loading}}>

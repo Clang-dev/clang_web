@@ -1,6 +1,7 @@
 import { getTokens, saveTokens, removeTokens } from './tokenService';
 
-const BACKEND_URL = 'https://clang-a3xo.onrender.com';
+// const BACKEND_URL = 'https://clang-a3xo.onrender.com';
+const BACKEND_URL = 'http://110.76.78.125:8000';
 
 const refreshAccessToken = async () => {
   const tokens = await getTokens();

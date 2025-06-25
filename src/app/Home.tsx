@@ -29,16 +29,15 @@ const Home = () => {
   );
 };
 
-const styles: {[key: string]: React.CSSProperties} = {
+const styles: Record<string, React.CSSProperties> = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    minHeight: '100vh',
     backgroundColor: '#FFFFFF',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: '40px',
-    boxSizing: 'border-box',
+    paddingBottom: 40,
+    height: '100vh',
   },
   centeredTextContainer: {
     flex: 1,
@@ -47,32 +46,34 @@ const styles: {[key: string]: React.CSSProperties} = {
     alignItems: 'center',
   },
   clangText: {
-    fontSize: '48px',
+    fontSize: 48,
     fontWeight: 'bold',
     color: '#1C1C1C',
     margin: 0,
   },
   buttonContainer: {
     width: '100%',
-    maxWidth: '400px',
-    padding: '0 20px 20px',
-    boxSizing: 'border-box',
+    padding: '0 40px 20px',    
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    paddingBottom: 20,
   },
   button: {
-    height: '50px',
+    width: '100%',
+    height: 40,
     backgroundColor: '#3680F7',
-    borderRadius: '8px',
-    display: 'flex',
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: '14px',
+    marginBottom: 14,
     border: 'none',
-    width: '100%',
     cursor: 'pointer',
+    
   },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: '16px',
+    fontSize: 14,
     fontWeight: 'bold',
   },
   secondaryButton: {
