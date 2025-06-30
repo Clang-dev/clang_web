@@ -4,6 +4,7 @@ import { IoChevronBack } from 'react-icons/io5';
 import type { IconBaseProps } from 'react-icons';
 import MicButton from '../assets/MicButton.png';
 import { getClassroom, getTranscript, saveTranscript } from '../service/fetchService';
+import { useUser } from '../hooks/UserContext';
 
 // Interfaces based on React Native implementation and API responses
 interface RoomInfo {
@@ -29,6 +30,7 @@ const AudioTranscription = () => {
   const navigate = useNavigate();
   const { id: room_id } = useParams<{ id: string }>();
   const location = useLocation();
+  const { user, loading: userLoading } = useUser();
 
   // State variables
   const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(null);
@@ -43,14 +45,22 @@ const AudioTranscription = () => {
   const [isExitPopupVisible, setExitPopupVisible] = useState(false);
 
   // User and WebSocket details
-  const user_uid = localStorage.getItem('user_uid');
-  const user_name = 'You'; // Or fetch from user context
+  const user_name = user?.username || 'You'; // Or fetch from user context
   const recorderRef = useRef<MediaRecorder | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
 
   const BackIcon = IoChevronBack as ComponentType<IconBaseProps>;
 
   useEffect(() => {
+    if (userLoading) {
+      return; // Wait for user to be loaded
+    }
+
+    if (!user) {
+      navigate('/login'); // Redirect if not logged in
+      return;
+    }
+
     if (!room_id) {
       navigate('/');
       return;
@@ -60,7 +70,7 @@ const AudioTranscription = () => {
       try {
         const data = await getClassroom(room_id);
         setRoomInfo(data);
-        setIsHost(data.created_by === user_uid);
+        setIsHost(data.created_by === user.uid);
       } catch (error) {
         console.error('Could not fetch classroom info.', error);
         alert('Could not fetch classroom info.');
@@ -98,16 +108,22 @@ const AudioTranscription = () => {
         recorderRef.current.stop();
       }
     };
-  }, [room_id, user_uid, navigate]);
+  }, [room_id, user, userLoading, navigate]);
 
   const toggleRecording = async () => {
+    if (!user) {
+      alert('You must be logged in to start transcription.');
+      navigate('/login');
+      return;
+    }
+
     if (!isRecording) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         setStatus('Connecting...');
 
         const socket = new WebSocket(
-          `ws://110.76.78.125:8000/0.1.0/transcribe/room/asr_translate_v2?classroom_uid=${room_id}&user_uid=${user_uid}`
+          `ws://110.76.78.125:8000/0.1.0/transcribe/room/asr_translate_v2?classroom_uid=${room_id}&user_uid=${user.uid}`
         );
         socketRef.current = socket;
 
@@ -129,17 +145,31 @@ const AudioTranscription = () => {
         };
 
         socket.onmessage = event => {
-          const message = JSON.parse(event.data);
-          if (message.is_speaking !== undefined) {
-            setIsSpeaking(message.is_speaking);
-          }
-          if (message.transcript) {
-            setTranscript([{
-              speaker_name: user_name,
-              speaker_uid: user_uid,
-              text: message.transcript,
-              created_at: new Date().toISOString(),
-            }]);
+          try {
+            const message = JSON.parse(event.data);
+            if (message.is_speaking !== undefined) {
+              setIsSpeaking(message.is_speaking);
+            }
+            if (message.transcript) {
+              setTranscript([
+                {
+                  speaker_name: user.username,
+                  speaker_uid: user.uid,
+                  text: message.transcript,
+                  created_at: new Date().toISOString(),
+                },
+              ]);
+            }
+          } catch (error) {
+            // Assuming raw string data is a transcript
+            setTranscript([
+              {
+                speaker_name: user.username,
+                speaker_uid: user.uid,
+                text: event.data,
+                created_at: new Date().toISOString(),
+              },
+            ]);
           }
         };
 
@@ -193,13 +223,18 @@ const AudioTranscription = () => {
       </div>
 
       <div style={styles.contentContainerScrollable}>
-        {messagesLoading ? (
+        {messagesLoading || userLoading ? (
           <p>Loading messages...</p>
         ) : (
           allTranscript.map((line, index) => (
             <div key={index} style={styles.card}>
               <div style={styles.cardHeader}>
-                <div style={{ ...styles.tag, backgroundColor: line.speaker_uid === user_uid ? '#5a43f3' : '#f0ad4e' }}>
+                <div
+                  style={{
+                    ...styles.tag,
+                    backgroundColor:
+                      line.speaker_uid === user?.uid ? '#5a43f3' : '#f0ad4e',
+                  }}>
                   <span style={styles.tagText}>{line.speaker_name}</span>
                 </div>
               </div>

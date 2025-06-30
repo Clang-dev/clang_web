@@ -32,14 +32,6 @@ interface UserProviderProps {
   children: ReactNode;
 }
 
-export const useUser = (): UserContextType => {
-  const context = useContext(UserContext);
-  if (!context) {
-    throw new Error('useUser must be used within a UserProvider');
-  }
-  return context;
-};
-
 // User Provider component
 export const UserProvider = ({children}: UserProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
@@ -71,4 +63,12 @@ export const UserProvider = ({children}: UserProviderProps) => {
       {children}
     </UserContext.Provider>
   );
+};
+
+export const useUser = (): UserContextType => {
+  const context = useContext(UserContext);
+  if (!context) {
+    throw new Error('useUser must be used within a UserProvider');
+  }
+  return context;
 };
