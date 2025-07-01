@@ -50,7 +50,7 @@ const Signup = () => {
           const userData = await meResponse.json();
           setUser(userData); // Set user in context
           alert('Success: Login successful!');
-          navigate('/home'); // Navigate to protected route
+          navigate('/'); // Navigate to protected route
         }
       } else {
         alert(`Error: ${data.detail}`);

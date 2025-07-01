@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { IoChevronBack } from 'react-icons/io5';
 import type { IconBaseProps } from 'react-icons';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../service/fetchService';
+import { login, me } from '../service/fetchService';
+import { useUser } from '../hooks/UserContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { setUser } = useUser();
   const BackIcon = IoChevronBack as React.ComponentType<IconBaseProps>;
   const navigate = useNavigate();
 
@@ -20,8 +22,15 @@ const Login = () => {
       const [response, data] = await login(email, password);
 
       if (response.ok) {
-        alert('Successfully logged in');
-        navigate('/');
+        const meResponse = await me();
+        if (meResponse && meResponse.ok) {
+          const userData = await meResponse.json();
+          setUser(userData);
+          alert('Successfully logged in');
+          navigate('/');
+        } else {
+          alert('Failed to fetch user data after login.');
+        }
       } else {
         alert(`Login failed: ${data.detail || 'Invalid credentials'}`);
       }
@@ -37,9 +46,6 @@ const Login = () => {
     <div style={styles.container}>
       {/* Header */}
       <div style={styles.headerContainer}>
-        <button style={styles.backButton} onClick={() => navigate(-1)}>
-          <BackIcon size={24} color="#090a0a" />
-        </button>
         <span style={styles.headerText}>Login</span>
       </div>
 

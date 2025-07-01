@@ -3,10 +3,9 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { IoChevronBack } from 'react-icons/io5';
 import type { IconBaseProps } from 'react-icons';
 import MicButton from '../assets/MicButton.png';
-import { getClassroom, getTranscript, saveTranscript } from '../service/fetchService';
+import { getClassroom, getTranscript, saveTranscript, getbackendUrl } from '../service/fetchService';
 import { useUser } from '../hooks/UserContext';
 
-// Interfaces based on React Native implementation and API responses
 interface RoomInfo {
   name: string;
   created_by: string;
@@ -41,15 +40,49 @@ const AudioTranscription = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
+  const [buffer, setBuffer] = useState('');
   const [allTranscript, setAllTranscript] = useState<TranscriptLine[]>([]);
   const [isExitPopupVisible, setExitPopupVisible] = useState(false);
 
   // User and WebSocket details
-  const user_name = user?.username || 'You'; // Or fetch from user context
+  const user_name = user?.username; 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
-  const BackIcon = IoChevronBack as ComponentType<IconBaseProps>;
+  const setupWebSocketConnection = () => {
+    if (!user || !room_id) return null;
+
+    const socket = new WebSocket(
+      `${getbackendUrl()}/0.1.0/transcribe/room/asr_translate_v2?classroom_uid=${room_id}&user_uid=${user.uid}`
+    );
+    
+    socket.onopen = () => {
+      setStatus('Connected. Ready to record.');
+    };
+
+    socket.onmessage = event => {
+      if (!event.data) return;
+      setTranscript(prev => [...prev, { 
+        speaker_name: user.username, 
+        speaker_uid: user.uid,
+        text: event.data,
+        created_at: new Date().toISOString(),
+      }]);
+    };
+
+    socket.onclose = () => {
+      setStatus('Click to start transcription');
+      setIsRecording(false);
+    };
+
+    socket.onerror = () => {
+      setStatus('Connection error. Please try again.');
+      setIsRecording(false);
+    };
+
+    return socket;
+  };
 
   useEffect(() => {
     if (userLoading) {
@@ -62,7 +95,7 @@ const AudioTranscription = () => {
     }
 
     if (!room_id) {
-      navigate('/');
+      navigate('/join-room'); // Redirect if no room ID
       return;
     }
 
@@ -98,6 +131,10 @@ const AudioTranscription = () => {
 
     getRoomInfo();
     getConversations();
+    
+    // Initial WebSocket setup - further reconnections will be handled by toggleRecording
+    const initialSocket = setupWebSocketConnection();
+    socketRef.current = initialSocket;
 
     // Cleanup WebSocket on component unmount
     return () => {
@@ -107,8 +144,14 @@ const AudioTranscription = () => {
       if (recorderRef.current && recorderRef.current.state !== 'inactive') {
         recorderRef.current.stop();
       }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
     };
   }, [room_id, user, userLoading, navigate]);
+
+  
 
   const toggleRecording = async () => {
     if (!user) {
@@ -119,70 +162,36 @@ const AudioTranscription = () => {
 
     if (!isRecording) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        setStatus('Connecting...');
-
-        const socket = new WebSocket(
-          `ws://110.76.78.125:8000/0.1.0/transcribe/room/asr_translate_v2?classroom_uid=${room_id}&user_uid=${user.uid}`
-        );
-        socketRef.current = socket;
-
-        socket.onopen = () => {
-          setStatus('Recording...');
-          setIsRecording(true);
-          setIsSpeaking(true);
-
-          const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-          recorderRef.current = recorder;
-
-          recorder.addEventListener('dataavailable', event => {
-            if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
-              socket.send(event.data);
-            }
-          });
-
-          recorder.start(500); // Send data every 500ms
-        };
-
-        socket.onmessage = event => {
-          try {
-            const message = JSON.parse(event.data);
-            if (message.is_speaking !== undefined) {
-              setIsSpeaking(message.is_speaking);
-            }
-            if (message.transcript) {
-              setTranscript([
-                {
-                  speaker_name: user.username,
-                  speaker_uid: user.uid,
-                  text: message.transcript,
-                  created_at: new Date().toISOString(),
-                },
-              ]);
-            }
-          } catch (error) {
-            // Assuming raw string data is a transcript
-            setTranscript([
-              {
-                speaker_name: user.username,
-                speaker_uid: user.uid,
-                text: event.data,
-                created_at: new Date().toISOString(),
-              },
-            ]);
+        // Make sure we have a working socket connection
+        if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+          setStatus('Connecting...');
+          socketRef.current = setupWebSocketConnection();
+          
+          // Wait a bit for the connection to establish
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+            setStatus('Failed to connect. Please try again.');
+            return;
           }
-        };
+        }
 
-        socket.onclose = () => {
-          setStatus('Click to start transcription');
-          setIsRecording(false);
-        };
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
+        setStatus('Recording...');
+        setIsRecording(true);
+        setIsSpeaking(true);
 
-        socket.onerror = () => {
-          setStatus('Connection error. Please try again.');
-          setIsRecording(false);
-        };
+        const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        recorderRef.current = recorder;
 
+        recorder.addEventListener('dataavailable', event => {
+          if (event.data.size > 0 && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+            socketRef.current.send(event.data);
+          }
+        });
+
+        recorder.start(500); // Send data every 500ms
       } catch (error) {
         console.error('Error starting recording:', error);
         setStatus('Failed to start recording.');
@@ -199,14 +208,35 @@ const AudioTranscription = () => {
         socketRef.current.close();
       }
 
-      if (transcript.length > 0 && transcript[0].text) {
-        const textToSave = transcript[0].text;
-        saveTranscript(textToSave, room_id!)
-          .then(() => {
-            setAllTranscript(prev => [...prev, transcript[0]]);
-            setTranscript([]);
-          })
-          .catch(err => console.error('Failed to save transcript', err));
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+
+      console.log(transcript.length, 'transcript length');
+
+      if (transcript.length > 0) {
+        const textToSave = transcript.map(t => t.text).join(' ');
+        if (textToSave) {
+          // Create a complete transcript object for the UI
+          const finalTranscript = {
+            speaker_name: user.username,
+            speaker_uid: user.uid,
+            text: textToSave,
+            created_at: new Date().toISOString(),
+          };
+          
+          // Update the UI immediately
+          setAllTranscript(prev => [...prev, finalTranscript]);
+          
+          // Save to database in parallel
+          saveTranscript(textToSave, room_id!)
+            .then(() => {
+              // Clear the transcript buffer after saving
+              setTranscript([]);
+            })
+            .catch(err => console.error('Failed to save transcript', err));
+        }
       }
     }
   };
@@ -216,9 +246,6 @@ const AudioTranscription = () => {
   return (
     <div style={styles.container}>
       <div style={styles.headerContainer}>
-        <button onClick={() => setExitPopupVisible(true)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-          <BackIcon size={24} color="#000" />
-        </button>
         <h2 style={styles.headerText}>{roomName}</h2>
       </div>
 
@@ -242,36 +269,34 @@ const AudioTranscription = () => {
             </div>
           ))
         )}
-        {isRecording && transcript.map((line, index) => (
-          <div key={`live-${index}`} style={styles.card}>
+        {isRecording && transcript.length > 0 && (
+          <div style={styles.card}>
             <div style={styles.cardHeader}>
-              <div style={{ ...styles.tag, backgroundColor: '#5a43f3' }}>
-                <span style={styles.tagText}>{line.speaker_name}</span>
+              <div style={{...styles.tag, backgroundColor: isHost ? '#5a43f3' : '#f0ad4e'}}>
+                <span style={styles.tagText}>{transcript[0].speaker_name}</span>
               </div>
             </div>
-            <p>{line.text}</p>
+            <p>{transcript.map(t => t.text).join(' ')}</p>
           </div>
-        ))}
+        )}
+
+        {isRecording && buffer && (
+          <div style={styles.card}>
+            <div style={styles.cardHeader}>
+              <div style={{...styles.tag, backgroundColor: '#5a43f3'}}>
+                <span style={styles.tagText}>{user_name}</span>
+              </div>
+            </div>
+            <p>{buffer}</p>
+          </div>
+        )}
       </div>
 
-      <p style={{ textAlign: 'center', marginBottom: 10 }}>{status}</p>
+      <p style={{textAlign: 'center', marginBottom: 10}}>{status}</p>
 
       <button onClick={toggleRecording} style={styles.micButtonContainer}>
         <img src={MicButton} alt="Mic" style={styles.micButton} />
       </button>
-
-      {isExitPopupVisible && (
-        <div style={styles.popupOverlay}>
-          <div style={styles.popupContainerFinished}>
-            <div style={styles.popupContentFinished}>
-              <h3 style={styles.popupTitleFinished}>Are you sure you want to exit?</h3>
-              <p style={styles.popupMessageFinished}>Your session will be closed.</p>
-            </div>
-            <button onClick={() => navigate('/')} style={styles.popupButtonFinished}>Confirm</button>
-            <button onClick={() => setExitPopupVisible(false)} style={{...styles.popupButtonFinished, background: '#eaebed', color: '#111', marginTop: 8}}>Cancel</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
