@@ -123,6 +123,17 @@ export const me = async () => {
   return response;
 };
 
+export const logout = async () => {
+  try {
+    // Clear tokens from local storage
+    await removeTokens();
+    return true;
+  } catch (error) {
+    console.error('Error during logout:', error);
+    return false;
+  }
+};
+
 export const getRooms = async () => {
   const response = await fetchWithAuth(
     `${BACKEND_URL}/0.1.0/classroom/active`,

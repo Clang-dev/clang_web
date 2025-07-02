@@ -1,11 +1,34 @@
 import React from 'react';
 import {useNavigate} from 'react-router-dom';
+import {useUser} from '../hooks/UserContext';
+import {logout} from '../service/fetchService';
 
 const Home = () => {
   const navigate = useNavigate();
+  const { user, setUser } = useUser();
+
+  const handleSignOut = async () => {
+    const success = await logout();
+    if (success) {
+      setUser(null);
+      navigate('/login');
+    }
+  };
 
   return (
     <div style={styles.container}>
+      {/* Header with Sign Out button */}
+      {user && (
+        <div style={styles.header}>
+          <div style={styles.userInfo}>
+            <span style={styles.welcomeText}>Welcome, {user.username}!</span>
+          </div>
+          <button style={styles.signOutButton} onClick={handleSignOut}>
+            <span style={styles.signOutText}>Sign Out</span>
+          </button>
+        </div>
+      )}
+
       <div style={styles.centeredTextContainer}>
         <h1 style={styles.clangText}>CLANG</h1>
       </div>
@@ -38,6 +61,35 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     paddingBottom: 40,
     height: '100vh',
+  },
+  header: {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '20px 24px',
+    borderBottom: '1px solid #E5E7EB',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  welcomeText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  signOutButton: {
+    backgroundColor: 'transparent',
+    border: '1px solid #D1D5DB',
+    borderRadius: 6,
+    padding: '8px 16px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  signOutText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '500',
   },
   centeredTextContainer: {
     flex: 1,

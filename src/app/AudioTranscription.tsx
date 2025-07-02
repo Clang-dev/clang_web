@@ -1,7 +1,5 @@
-import React, { useEffect, useState, useRef, ComponentType } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { IoChevronBack } from 'react-icons/io5';
-import type { IconBaseProps } from 'react-icons';
 import MicButton from '../assets/MicButton.png';
 import { getClassroom, getTranscript, saveTranscript, getbackendUrl } from '../service/fetchService';
 import { useUser } from '../hooks/UserContext';
@@ -34,18 +32,18 @@ const AudioTranscription = () => {
   // State variables
   const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(null);
   const [isHost, setIsHost] = useState<boolean | undefined>();
-  const [roomLoading, setRoomLoading] = useState(true);
+  // const [roomLoading, setRoomLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(true);
   const [status, setStatus] = useState('Click to start transcription');
   const [isRecording, setIsRecording] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  // const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
-  const [buffer, setBuffer] = useState('');
+  // const [buffer, setBuffer] = useState('');
   const [allTranscript, setAllTranscript] = useState<TranscriptLine[]>([]);
   const [isExitPopupVisible, setExitPopupVisible] = useState(false);
 
   // User and WebSocket details
-  const user_name = user?.username; 
+  // const user_name = user?.username; 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -107,9 +105,7 @@ const AudioTranscription = () => {
       } catch (error) {
         console.error('Could not fetch classroom info.', error);
         alert('Could not fetch classroom info.');
-      } finally {
-        setRoomLoading(false);
-      }
+      } 
     };
 
     const getConversations = async () => {
@@ -151,6 +147,82 @@ const AudioTranscription = () => {
     };
   }, [room_id, user, userLoading, navigate]);
 
+  // Handle browser back button and navigation prevention for hosts
+  useEffect(() => {
+    if (!isHost || !user) return;
+
+    // Prevent page unload (closing tab, refreshing, navigating away)
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'As the host, leaving will end the session for all participants. Are you sure you want to leave?';
+      return 'As the host, leaving will end the session for all participants. Are you sure you want to leave?';
+    };
+
+    // Prevent browser back button
+    const handlePopState = (e: PopStateEvent) => {
+      e.preventDefault();
+      setExitPopupVisible(true);
+      // Push current state back to prevent actual navigation
+      window.history.pushState(null, '', window.location.href);
+    };
+
+    // Handle navigation attempts via React Router or other programmatic navigation
+    const handleBeforeUnloadCapture = (e: Event) => {
+      if (isHost && !isExitPopupVisible) {
+        e.preventDefault();
+        setExitPopupVisible(true);
+        return false;
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    
+    // Also capture any attempts to navigate away
+    document.addEventListener('beforeunload', handleBeforeUnloadCapture, true);
+    
+    // Push initial state to handle back button
+    window.history.pushState(null, '', window.location.href);
+    
+    // Additional protection: override window.close for hosts
+    const originalClose = window.close;
+    window.close = () => {
+      if (isHost && !window.confirm('As the host, closing will end the session for all participants. Are you sure?')) {
+        return;
+      }
+      originalClose.call(window);
+    };
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+      document.removeEventListener('beforeunload', handleBeforeUnloadCapture, true);
+      window.close = originalClose;
+    };
+  }, [isHost, user, isExitPopupVisible]);
+
+  const handleExitConfirm = () => {
+    setExitPopupVisible(false);
+    // Clean up resources before leaving
+    if (socketRef.current) {
+      socketRef.current.close();
+    }
+    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+      recorderRef.current.stop();
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    
+    // Navigate to join room page
+    navigate('/join-room');
+  };
+
+  const handleExitCancel = () => {
+    setExitPopupVisible(false);
+  };
+
   
 
   const toggleRecording = async () => {
@@ -180,7 +252,7 @@ const AudioTranscription = () => {
         streamRef.current = stream;
         setStatus('Recording...');
         setIsRecording(true);
-        setIsSpeaking(true);
+        // setIsSpeaking(true);
 
         const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
         recorderRef.current = recorder;
@@ -199,7 +271,7 @@ const AudioTranscription = () => {
     } else {
       setStatus('Click to start transcription');
       setIsRecording(false);
-      setIsSpeaking(false);
+      // setIsSpeaking(false);
 
       if (recorderRef.current && recorderRef.current.state !== 'inactive') {
         recorderRef.current.stop();
@@ -280,7 +352,7 @@ const AudioTranscription = () => {
           </div>
         )}
 
-        {isRecording && buffer && (
+        {/* {isRecording && buffer && (
           <div style={styles.card}>
             <div style={styles.cardHeader}>
               <div style={{...styles.tag, backgroundColor: '#5a43f3'}}>
@@ -289,7 +361,7 @@ const AudioTranscription = () => {
             </div>
             <p>{buffer}</p>
           </div>
-        )}
+        )} */}
       </div>
 
       <p style={{textAlign: 'center', marginBottom: 10}}>{status}</p>
@@ -297,6 +369,28 @@ const AudioTranscription = () => {
       <button onClick={toggleRecording} style={styles.micButtonContainer}>
         <img src={MicButton} alt="Mic" style={styles.micButton} />
       </button>
+
+      {/* Exit Confirmation Popup */}
+      {isExitPopupVisible && (
+        <div style={styles.popupOverlay}>
+          <div style={styles.popupContainerExit}>
+            <div style={styles.popupContentExit}>
+              <h3 style={styles.popupTitleExit}>Leave Room?</h3>
+              <p style={styles.popupMessageExit}>
+                As the host, leaving the room will end the session for all participants. Are you sure you want to leave?
+              </p>
+            </div>
+            <div style={styles.popupButtonsContainer}>
+              <button onClick={handleExitCancel} style={styles.popupButtonCancel}>
+                Cancel
+              </button>
+              <button onClick={handleExitConfirm} style={styles.popupButtonConfirm}>
+                Leave Room
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -321,6 +415,23 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#fff',
     zIndex: 10,
     borderBottom: '1px solid #eee',
+  },
+  backButton: {
+    background: 'none',
+    border: 'none',
+    padding: 8,
+    borderRadius: 8,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+  },
+  backArrow: {
+    fontSize: 24,
+    color: '#333',
+    fontWeight: 'bold',
+    lineHeight: 1,
   },
   headerText: {
     margin: 0,
@@ -441,6 +552,73 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 16,
     cursor: 'pointer',
     textAlign: 'center',
+  },
+  popupContainerExit: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: 350,
+    minHeight: 200,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  popupContentExit: {
+    flex: 1,
+    width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  popupTitleExit: {
+    fontSize: 20,
+    fontWeight: 700,
+    color: '#111',
+    margin: 0,
+    marginBottom: 12,
+    textAlign: 'left',
+  },
+  popupMessageExit: {
+    fontSize: 16,
+    color: '#666',
+    margin: 0,
+    lineHeight: 1.4,
+    textAlign: 'left',
+  },
+  popupButtonsContainer: {
+    display: 'flex',
+    gap: 12,
+    width: '100%',
+  },
+  popupButtonCancel: {
+    flex: 1,
+    background: '#f5f5f5',
+    color: '#333',
+    fontWeight: 600,
+    fontSize: 16,
+    border: 'none',
+    borderRadius: 12,
+    padding: '14px 0',
+    cursor: 'pointer',
+    textAlign: 'center',
+    transition: 'background-color 0.2s',
+  },
+  popupButtonConfirm: {
+    flex: 1,
+    background: '#ff4757',
+    color: '#fff',
+    fontWeight: 600,
+    fontSize: 16,
+    border: 'none',
+    borderRadius: 12,
+    padding: '14px 0',
+    cursor: 'pointer',
+    textAlign: 'center',
+    transition: 'background-color 0.2s',
   },
 };
 
