@@ -229,3 +229,21 @@ export const getTranscript = async (room_id: string) => {
 
   return data;
 };
+
+export const getParticipantCount = async (room_id: string) => {
+  const response = await fetchWithAuth(
+    `${BACKEND_URL}/0.1.0/classroom/${room_id}/participants/count`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+  );
+  if (!response) {
+    throw new Error('Failed to fetch data');
+  }
+  const data = await response.json();
+
+  return data.participant_count;
+};
