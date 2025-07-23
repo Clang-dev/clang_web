@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { IoChevronBack, IoChevronDown } from 'react-icons/io5';
 import type { IconBaseProps } from 'react-icons';
 import type { ComponentType } from 'react';
+import { createClassroom } from '../service/fetchService';
 
 const languages = [
-  { id: '1', flag: '🇰🇷', label: ' 한국어' },
+  { id: '1', flag: '🇰🇷', label: ' Korean' },
   { id: '2', flag: '🇺🇸', label: ' English' },
 ];
 
@@ -30,26 +31,43 @@ const CreateRoom = () => {
 
   const handleCreateRoom = async () => {
     setCreateRoomBtnName('Creating...');
+
     if (!roomName.trim()) {
       alert('Classroom name is required.');
       setCreateRoomBtnName('Create');
       return;
     }
+    if (selectedLanguage === 'Select') {
+      alert('Please select a language.');
+      setCreateRoomBtnName('Create');
+      return;
+    }
 
-    // Simulated response
-    setTimeout(() => {
-      alert('Classroom created successfully!');
-      navigate(`/transcription/${roomName.toLowerCase().replace(/\s+/g, '-')}`); 
-    }, 500);
+    try {
+      const response = await createClassroom(roomName, selectedLanguage);
+
+      if (response.ok) {
+        alert('Classroom created successfully!');
+        navigate('/join-room');
+      } else {
+        const data = await response.json();
+        alert(`Error: ${data.detail || 'Failed to create classroom'}`);
+      }
+    } catch (error) {
+      console.error('Create classroom error:', error);
+      alert('Network Error: Failed to connect to the server.');
+    } finally {
+      setCreateRoomBtnName('Create');
+    }
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.headerContainer}>
-        <button 
+        <button
           type="button"
-          onClick={() => navigate(-1)} 
-          style={{ background: 'none', border: 'none' }}
+          onClick={() => navigate(-1)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
         >
           <BackIcon size={24} color="#000" />
         </button>
@@ -57,11 +75,13 @@ const CreateRoom = () => {
       </div>
 
       <div style={styles.languageContainer}>
-        <label htmlFor="language-select" style={styles.label}>Original language</label>
-        <button 
+        <label htmlFor="language-select" style={styles.label}>
+          Original language
+        </label>
+        <button
           type="button"
           id="language-select"
-          style={styles.dropdown} 
+          style={styles.dropdown}
           onClick={toggleLanguageDropdown}
         >
           <div style={styles.dropdownContent}>
@@ -74,9 +94,8 @@ const CreateRoom = () => {
             {languages.map(item => (
               <button
                 key={item.id}
-                type="button"
                 style={styles.dropdownOption}
-                onClick={() => handleLanguageSelect(`${item.flag} ${item.label}`)}
+                onClick={() => handleLanguageSelect(item.label)}
               >
                 <span style={styles.dropdownOptionText}>
                   {item.flag} {item.label}
@@ -95,15 +114,14 @@ const CreateRoom = () => {
           id="room-name"
           style={styles.input}
           placeholder="Please type room name"
-          maxLength={30}
+          maxLength={40}
           value={roomName}
           onChange={e => setRoomName(e.target.value)}
         />
-        <div style={styles.charCount}>{roomName.length}/30</div>
+        <p style={styles.charCount}>{roomName.length}/40</p>
       </div>
 
       <button
-        type="button"
         style={{
           ...styles.button,
           ...(roomName.length === 0 || createRoomBtnName === 'Creating...'
@@ -130,7 +148,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
-    height: 56,
+    height: 40,
     marginBottom: 20,
     gap: 10,
   },
@@ -230,10 +248,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   disabledButton: {
     backgroundColor: '#a7acb6',
+    cursor: 'not-allowed',
   },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
   },
   infoIcon: {
