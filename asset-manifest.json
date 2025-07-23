@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/clang-web/static/css/main.e6c13ad2.css",
-    "main.js": "/clang-web/static/js/main.22e92be6.js",
-    "static/js/453.fee3e628.chunk.js": "/clang-web/static/js/453.fee3e628.chunk.js",
-    "index.html": "/clang-web/index.html",
-    "main.e6c13ad2.css.map": "/clang-web/static/css/main.e6c13ad2.css.map",
-    "main.22e92be6.js.map": "/clang-web/static/js/main.22e92be6.js.map",
-    "453.fee3e628.chunk.js.map": "/clang-web/static/js/453.fee3e628.chunk.js.map"
+    "main.css": "/clang_web/static/css/main.e6c13ad2.css",
+    "main.js": "/clang_web/static/js/main.d044983b.js",
+    "static/js/453.fee3e628.chunk.js": "/clang_web/static/js/453.fee3e628.chunk.js",
+    "index.html": "/clang_web/index.html",
+    "main.e6c13ad2.css.map": "/clang_web/static/css/main.e6c13ad2.css.map",
+    "main.d044983b.js.map": "/clang_web/static/js/main.d044983b.js.map",
+    "453.fee3e628.chunk.js.map": "/clang_web/static/js/453.fee3e628.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e6c13ad2.css",
-    "static/js/main.22e92be6.js"
+    "static/js/main.d044983b.js"
   ]
 }
