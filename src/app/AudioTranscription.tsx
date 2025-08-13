@@ -122,7 +122,10 @@ const AudioTranscription = () => {
         // Handle live transcription updates (visible to all users)
         if (message.text) {
           // Replace live transcription with the latest complete text
-          setLiveTranscript(prev => prev + (prev ? ' ' : '') + message.text);
+          const txt = document.createElement("textarea");
+          txt.innerHTML  = message.text;
+          console.log('Live transcription update:', txt.value);
+          setLiveTranscript(prev => prev + (prev ? ' ' : '') + txt.value);
           setLiveTranscriptSpeaker({
             name: message.speaker_name || 'Unknown',
             uid: message.speaker_uid || ''
@@ -254,7 +257,7 @@ const AudioTranscription = () => {
             if (base64Data) {
               sendWebSocketMessage({
                 type: 'audio_data',
-                data: base64Data
+                data: base64Data,
               });
             }
           };
